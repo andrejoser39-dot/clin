@@ -1,19 +1,21 @@
-// backend/server.js
+// 1. Importar dependencias
 const express = require('express');
 const cors = require('cors');
-const pacientesRoutes = require('./src/routes/pacientes.routes');
 
+// 2. Inicializar Express
 const app = express();
 
-// Middlewares
+// 3. Middlewares (configuraciones generales)
 app.use(cors());
 app.use(express.json());
 
-// Montar Rutas
-app.use('/api/pacientes', pacientesRoutes);
+// 4. Registrar Rutas de la aplicación
+// Ruta que ya tenías para pacientes:
 
-// Iniciar Servidor
+app.use('/api/pacientes', require('./src/routes/pacientes.routes'));
+app.use('/api/encuestas', require('./src/routes/encuestas'));
+// 5. Iniciar Servidor
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-    console.log(`Servidor escuchando en http://localhost:${PORT}`);
+    console.log(`Servidor de HCE corriendo en el puerto ${PORT}`);
 });

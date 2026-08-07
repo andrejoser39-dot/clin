@@ -17,12 +17,14 @@ const getHistoriaClinica = async (req, res) => {
 
         const paciente = pacientes[0];
 
-        // Consultar atenciones médicas asociadas
+        // Consultar atenciones asociadas mapeando los campos requeridos por el frontend
         const [atenciones] = await pool.query(
             `SELECT 
                 id_atencion AS id_consulta,
-                fecha_atencion AS fecha_consulta,
+                fecha_atencion,
+                institucion,
                 motivo_consulta,
+                enfermedad_actual,
                 sintomas,
                 examen_fisico,
                 plan_tratamiento,
@@ -33,9 +35,10 @@ const getHistoriaClinica = async (req, res) => {
             [paciente.id_paciente]
         );
 
+        // Se envía la clave "atenciones" que atencionesCache lee en app.js
         return res.json({
             paciente,
-            historial: atenciones
+            atenciones
         });
 
     } catch (error) {
@@ -79,14 +82,32 @@ const createPaciente = async (req, res) => {
 
 // 3. Registrar una nueva atención / consulta médica
 const createConsulta = async (req, res) => {
-    const { id_paciente, motivo_consulta, sintomas, examen_fisico, plan_tratamiento, observaciones } = req.body;
+    const { 
+        id_paciente, 
+        institucion, 
+        motivo_consulta, 
+        enfermedad_actual, 
+        sintomas, 
+        examen_fisico, 
+        plan_tratamiento, 
+        observaciones 
+    } = req.body;
 
     try {
         const [result] = await pool.query(
             `INSERT INTO atenciones 
-            (id_paciente, motivo_consulta, sintomas, examen_fisico, plan_tratamiento, observaciones) 
-            VALUES (?, ?, ?, ?, ?, ?)`,
-            [id_paciente, motivo_consulta, sintomas, examen_fisico, plan_tratamiento, observaciones]
+            (id_paciente, institucion, motivo_consulta, enfermedad_actual, sintomas, examen_fisico, plan_tratamiento, observaciones, fecha_atencion) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+            [
+                id_paciente, 
+                institucion || 'ESE Hospital Municipal', 
+                motivo_consulta, 
+                enfermedad_actual || sintomas || '', 
+                sintomas || '', 
+                examen_fisico || '', 
+                plan_tratamiento || '', 
+                observaciones || ''
+            ]
         );
 
         return res.status(201).json({
@@ -147,14 +168,14 @@ const deletePaciente = async (req, res) => {
 // 6. Actualizar atención / consulta médica
 const updateConsulta = async (req, res) => {
     const { id_consulta } = req.params;
-    const { motivo_consulta, sintomas, examen_fisico, plan_tratamiento, observaciones } = req.body;
+    const { institucion, motivo_consulta, enfermedad_actual, sintomas, examen_fisico, plan_tratamiento, observaciones } = req.body;
 
     try {
         const [result] = await pool.query(
             `UPDATE atenciones 
-             SET motivo_consulta = ?, sintomas = ?, examen_fisico = ?, plan_tratamiento = ?, observaciones = ?
+             SET institucion = ?, motivo_consulta = ?, enfermedad_actual = ?, sintomas = ?, examen_fisico = ?, plan_tratamiento = ?, observaciones = ?
              WHERE id_atencion = ?`,
-            [motivo_consulta, sintomas, examen_fisico, plan_tratamiento, observaciones, id_consulta]
+            [institucion, motivo_consulta, enfermedad_actual, sintomas, examen_fisico, plan_tratamiento, observaciones, id_consulta]
         );
 
         if (result.affectedRows === 0) {
@@ -186,7 +207,6 @@ const deleteConsulta = async (req, res) => {
     }
 };
 
-// Exportación de los controladores
 module.exports = {
     getHistoriaClinica,
     createPaciente,

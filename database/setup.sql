@@ -69,3 +69,77 @@ INSERT INTO atenciones (id_atencion, id_paciente, fecha_atencion, motivo_consult
 (1, 1, '2026-05-10 09:30:00', 'Cefalea intensa y mareo de 2 días de evolución', 'Dolor pulsátil en región frontal, fotosensibilidad leve', 'PA: 120/80 mmHg, FC: 72 bpm, afebril', 'Acetaminofén 500mg cada 8 horas por 3 días. Reposo.', 'Se indica regresar si el dolor persiste.'),
 (2, 1, '2026-07-18 14:15:00', 'Control general y revisión de exámenes de laboratorio', 'Asintomático al momento del control', 'Buen estado general. Cardiopulmonar normal.', 'Mantener dieta balanceada y actividad física.', 'Exámenes dentro de rangos normales.'),
 (3, 2, '2026-06-02 11:00:00', 'Cuadro gripal, fiebre y odinofagia', 'Fiebre de 38.2°C, dolor de garganta y congestión', 'Orofaringe eritematosa sin placas purulentas.', 'Ibuprofeno 400mg cada 8 horas por 5 días.', 'Abundantes líquidos. Reposo en casa.');
+
+
+USE historia_clinica_nacional;
+
+-- 1. Agregar las columnas faltantes a la tabla atenciones
+ALTER TABLE atenciones 
+ADD COLUMN institucion VARCHAR(150) AFTER id_paciente,
+ADD COLUMN enfermedad_actual TEXT AFTER motivo_consulta;
+
+UPDATE atenciones SET institucion = 'ESE Hospital Municipal', enfermedad_actual = sintomas WHERE id_atencion > 0;
+
+
+
+-- CONSULTAS
+
+USE historia_clinica_nacional;
+
+SELECT * FROM atenciones;
+
+-- Consulta las atenciones ordenadas de la más reciente a la más antigua junto con los datos personales del paciente:
+SELECT 
+    p.documento,
+    CONCAT(p.nombres, ' ', p.apellidos) AS nombre_completo,
+    p.id_grupo_sanguineo,
+    a.fecha_atencion,
+    a.institucion,
+    a.motivo_consulta,
+    a.enfermedad_actual
+FROM pacientes p
+INNER JOIN atenciones a ON p.id_paciente = a.id_paciente
+WHERE p.documento = '1098765432'
+ORDER BY a.fecha_atencion DESC;
+
+-- Muestra cuántas consultas ha registrado cada paciente registrado en el sistema:
+SELECT 
+    p.id_paciente,
+    p.documento,
+    CONCAT(p.nombres, ' ', p.apellidos) AS paciente,
+    COUNT(a.id_atencion) AS total_atenciones
+FROM pacientes p
+LEFT JOIN atenciones a ON p.id_paciente = a.id_paciente
+GROUP BY p.id_paciente, p.documento, p.nombres, p.apellidos
+ORDER BY total_atenciones DESC;
+
+-- Encuentra a los usuarios dados de alta en el sistema que todavía no tienen ninguna consulta médica ingresada:
+SELECT 
+    p.id_paciente,
+    p.documento,
+    CONCAT(p.nombres, ' ', p.apellidos) AS paciente,
+    p.telefono
+FROM pacientes p
+LEFT JOIN atenciones a ON p.id_paciente = a.id_paciente
+WHERE a.id_atencion IS NULL;
+
+-- Útil para comprobar de inmediato en MySQL el último registro que guardaste desde el formulario de tu aplicación web:
+SELECT 
+    p.id_paciente,
+    p.documento,
+    CONCAT(p.nombres, ' ', p.apellidos) AS paciente,
+    p.telefono
+FROM pacientes p
+LEFT JOIN atenciones a ON p.id_paciente = a.id_paciente
+WHERE a.id_atencion IS NULL;
+
+-- Para verificar el funcionamiento de las tablas asociadas a encuestas y sus preguntas:
+SELECT 
+    e.titulo AS encuesta,
+    pe.orden,
+    pe.texto_pregunta,
+    pe.tipo_respuesta
+FROM encuestas e
+INNER JOIN preguntas_encuestas pe ON e.id_encuesta = pe.id_encuesta
+WHERE e.activo = TRUE
+ORDER BY pe.orden ASC;

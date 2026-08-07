@@ -46,6 +46,68 @@ CREATE TABLE IF NOT EXISTS atenciones (
     FOREIGN KEY (id_paciente) REFERENCES pacientes(id_paciente) ON DELETE CASCADE
 );
 
+
+-- 1. Tabla de Especialidades Médicas
+CREATE TABLE IF NOT EXISTS especialidades (
+    id_especialidad INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_especialidad VARCHAR(100) NOT NULL UNIQUE,
+    descripcion TEXT
+);
+
+-- 2. Tabla de Médicos / Personal de Salud
+CREATE TABLE IF NOT EXISTS medicos (
+    id_medico INT AUTO_INCREMENT PRIMARY KEY,
+    documento VARCHAR(20) NOT NULL UNIQUE,
+    nombres VARCHAR(100) NOT NULL,
+    apellidos VARCHAR(100) NOT NULL,
+    registro_medico VARCHAR(50) NOT NULL UNIQUE,
+    id_especialidad INT,
+    telefono VARCHAR(15),
+    email VARCHAR(100),
+    FOREIGN KEY (id_especialidad) REFERENCES especialidades(id_especialidad) ON DELETE SET NULL
+);
+
+-- 3. Tabla de Diagnósticos (CIE-10)
+CREATE TABLE IF NOT EXISTS diagnosticos (
+    id_diagnostico INT AUTO_INCREMENT PRIMARY KEY,
+    codigo_cie10 VARCHAR(10) NOT NULL UNIQUE,
+    descripcion TEXT NOT NULL
+);
+
+-- 4. Tabla de Citas Médicas (Agendamiento)
+CREATE TABLE IF NOT EXISTS citas (
+    id_cita INT AUTO_INCREMENT PRIMARY KEY,
+    id_paciente INT NOT NULL,
+    id_medico INT NOT NULL,
+    fecha_hora DATETIME NOT NULL,
+    estado ENUM('Pendiente', 'Completada', 'Cancelada') DEFAULT 'Pendiente',
+    motivo VARCHAR(255),
+    FOREIGN KEY (id_paciente) REFERENCES pacientes(id_paciente) ON DELETE CASCADE,
+    FOREIGN KEY (id_medico) REFERENCES medicos(id_medico) ON DELETE CASCADE
+);
+
+-- 5. Tabla de Medicamentos / Vademécum
+CREATE TABLE IF NOT EXISTS medicamentos (
+    id_medicamento INT AUTO_INCREMENT PRIMARY KEY,
+    nombre_comercial VARCHAR(100) NOT NULL,
+    nombre_generico VARCHAR(100) NOT NULL,
+    presentacion VARCHAR(50), -- Ej: Tabletas, Jarabe, Ampolla
+    concentracion VARCHAR(50)  -- Ej: 500mg, 10mg/ml
+);
+
+-- 6. Tabla de Prescripciones / Recetas Médicas (Vinculada a Atenciones)
+CREATE TABLE IF NOT EXISTS prescripciones (
+    id_prescripcion INT AUTO_INCREMENT PRIMARY KEY,
+    id_atencion INT NOT NULL,
+    id_medicamento INT NOT NULL,
+    dosis VARCHAR(100) NOT NULL,       -- Ej: 1 tableta
+    frecuencia VARCHAR(100) NOT NULL,  -- Ej: Cada 8 horas
+    duracion VARCHAR(50) NOT NULL,    -- Ej: 7 días
+    indicaciones TEXT,
+    FOREIGN KEY (id_atencion) REFERENCES atenciones(id_atencion) ON DELETE CASCADE,
+    FOREIGN KEY (id_medicamento) REFERENCES medicamentos(id_medicamento) ON DELETE CASCADE
+);
+
 -- ============================================================
 -- INSERCIÓN DE DATOS INICIALES (SEED)
 -- ============================================================
@@ -71,12 +133,13 @@ INSERT INTO atenciones (id_atencion, id_paciente, fecha_atencion, motivo_consult
 (3, 2, '2026-06-02 11:00:00', 'Cuadro gripal, fiebre y odinofagia', 'Fiebre de 38.2°C, dolor de garganta y congestión', 'Orofaringe eritematosa sin placas purulentas.', 'Ibuprofeno 400mg cada 8 horas por 5 días.', 'Abundantes líquidos. Reposo en casa.');
 
 
-USE historia_clinica_nacional;
 
 -- 1. Agregar las columnas faltantes a la tabla atenciones
 ALTER TABLE atenciones 
-ADD COLUMN institucion VARCHAR(150) AFTER id_paciente,
-ADD COLUMN enfermedad_actual TEXT AFTER motivo_consulta;
+ADD COLUMN id_medico INT AFTER id_paciente,
+ADD COLUMN id_diagnostico INT AFTER enfermedad_actual,
+ADD CONSTRAINT fk_atenciones_medicos FOREIGN KEY (id_medico) REFERENCES medicos(id_medico) ON DELETE SET NULL,
+ADD CONSTRAINT fk_atenciones_diagnosticos FOREIGN KEY (id_diagnostico) REFERENCES diagnosticos(id_diagnostico) ON DELETE SET NULL;
 
 UPDATE atenciones SET institucion = 'ESE Hospital Municipal', enfermedad_actual = sintomas WHERE id_atencion > 0;
 
